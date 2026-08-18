@@ -1,0 +1,214 @@
+{
+	"info": {
+		"_postman_id": "f8a0e234-92d1-4b10-86b2-6789abcdef00",
+		"name": "Servicio de Correo Django REST API",
+		"description": "Colección para probar los endpoints del microservicio de correos con autenticación por API Key y archivos adjuntos (hasta 10 MB).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Enviar Correo con Adjunto (form-data)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "{{api_key}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "recipient",
+							"value": "destinatario@ejemplo.com",
+							"type": "text"
+						},
+						{
+							"key": "subject",
+							"value": "Envío de Documento Adjunto",
+							"type": "text"
+						},
+						{
+							"key": "body_html",
+							"value": "<h1>Adjunto requerido</h1><p>Se adjunta el archivo solicitado en el correo.</p>",
+							"type": "text"
+						},
+						{
+							"key": "attachment",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/emails/send/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"emails",
+						"send",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "2. Enviar Correo (HTML Directo - JSON)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "{{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"recipient\": \"destinatario@ejemplo.com\",\n    \"subject\": \"Prueba sin adjunto desde Postman\",\n    \"body_html\": \"<h1>¡Hola!</h1><p>Este es un correo sin archivos adjuntos.</p>\"\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/emails/send/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"emails",
+						"send",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. Enviar Correo (Usando Plantilla DB - JSON)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "{{api_key}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"recipient\": \"destinatario@ejemplo.com\",\n    \"template_code\": \"OTP_VALIDATION\",\n    \"context\": {\n        \"nombre\": \"Francisco\",\n        \"codigo_otp\": \"849201\"\n    }\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/emails/send/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"emails",
+						"send",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. Consultar Estado por Tracking ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "{{api_key}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/emails/status/{{tracking_id}}/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"emails",
+						"status",
+						"{{tracking_id}}",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "5. Prueba Error - Exceso de Tamaño (> 10 MB)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "X-API-KEY",
+						"value": "{{api_key}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "recipient",
+							"value": "destinatario@ejemplo.com",
+							"type": "text"
+						},
+						{
+							"key": "subject",
+							"value": "Prueba Archivo Pesado",
+							"type": "text"
+						},
+						{
+							"key": "body_html",
+							"value": "<p>Prueba de rechazo por tamaño de archivo</p>",
+							"type": "text"
+						},
+						{
+							"key": "attachment",
+							"type": "file",
+							"src": []
+						}
+					]
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/emails/send/",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"emails",
+						"send",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

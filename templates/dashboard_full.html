@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard General - Servicio de Correos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white p-4 shadow-lg">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold">📊 Control Panel - Email Service</h1>
+            <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400">X-API-KEY:</span>
+                <input type="password" id="apiKey" value="{{ default_api_key }}" placeholder="Ingresa tu API Key" 
+                    class="px-3 py-1 text-sm bg-slate-800 border border-slate-700 rounded text-white focus:outline-none w-52 font-mono">
+                <button onclick="loadDashboardData()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs font-semibold">Cargar</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Banner de Advertencia si NO hay API Key configurada -->
+    {% if not default_api_key %}
+    <div id="configWarning" class="max-w-7xl mx-auto mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex justify-between items-center">
+        <div>
+            <strong>⚠️ Advertencia de Configuración:</strong> No se ha detectado una API Key predeterminada. Agrega <code>DEFAULT_DASHBOARD_API_KEY</code> en tu <code>core/settings/local.py</code> para omitir este paso en desarrollo.
+        </div>
+    </div>
+    {% endif %}
+
+    <main class="max-w-7xl mx-auto mt-6 p-4 space-y-6">
+
+        <!-- Métricas -->
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs font-bold text-slate-400 uppercase">Total Procesados</span>
+                <p id="statTotal" class="text-2xl font-black text-slate-800 mt-1">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs font-bold text-green-500 uppercase">Enviados (SENT)</span>
+                <p id="statSent" class="text-2xl font-black text-green-600 mt-1">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs font-bold text-red-500 uppercase">Fallidos (FAILED)</span>
+                <p id="statFailed" class="text-2xl font-black text-red-600 mt-1">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                <span class="text-xs font-bold text-yellow-500 uppercase">Pendientes (PENDING)</span>
+                <p id="statPending" class="text-2xl font-black text-yellow-600 mt-1">0</p>
+            </div>
+        </section>
+
+        <!-- Pestañas y Contenido -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="border-b border-slate-200 flex justify-between items-center bg-slate-50 pr-4">
+                <div class="flex text-sm font-semibold">
+                    <button onclick="switchTab('logsTab')" class="tab-btn px-6 py-3 border-b-2 border-blue-600 text-blue-600">Logs de Correos</button>
+                    <button onclick="switchTab('templatesTab')" class="tab-btn px-6 py-3 border-b-2 border-transparent text-slate-500">Plantillas</button>
+                    <button onclick="switchTab('keysTab')" class="tab-btn px-6 py-3 border-b-2 border-transparent text-slate-500">API Keys / Sistemas</button>
+                </div>
+                <!-- Botones de Acción -->
+                <div class="flex gap-2">
+                    <button onclick="openModal('modalTemplate')" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                        + Nueva Plantilla
+                    </button>
+                    <button onclick="openModal('modalKey')" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                        + Generar API Key
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabla Email Logs -->
+            <div id="logsTab" class="tab-content p-4">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100 uppercase text-slate-500 font-semibold">
+                        <tr>
+                            <th class="p-3">Tracking ID</th>
+                            <th class="p-3">Destinatario</th>
+                            <th class="p-3">Asunto</th>
+                            <th class="p-3">Estado</th>
+                            <th class="p-3">Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+
+            <!-- Tabla Plantillas -->
+            <div id="templatesTab" class="tab-content p-4 hidden">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100 uppercase text-slate-500 font-semibold">
+                        <tr>
+                            <th class="p-3">Código</th>
+                            <th class="p-3">Asunto Base</th>
+                            <th class="p-3">Fecha Creación</th>
+                        </tr>
+                    </thead>
+                    <tbody id="templatesTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+
+            <!-- Tabla API Keys -->
+            <div id="keysTab" class="tab-content p-4 hidden">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100 uppercase text-slate-500 font-semibold">
+                        <tr>
+                            <th class="p-3">Sistema / Aplicación</th>
+                            <th class="p-3">API Key Hex</th>
+                            <th class="p-3">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keysTableBody" class="divide-y divide-slate-100"></tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal 1: Nueva Plantilla -->
+    <div id="modalTemplate" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xl border border-slate-200">
+            <h3 class="text-lg font-bold mb-4 text-slate-900">Crear Nueva Plantilla</h3>
+            <form id="formTemplate" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Código de Plantilla</label>
+                    <input type="text" id="tplCode" placeholder="Ej: WELCOME_USER" required
+                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Asunto Base</label>
+                    <input type="text" id="tplSubject" placeholder="¡Bienvenido/a, {{ nombre }}!" required
+                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Cuerpo HTML</label>
+                    <textarea id="tplBody" rows="5" placeholder="<h1>Hola {{ nombre }}</h1>..." required
+                              class="w-full p-2 text-sm border border-slate-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalTemplate')" class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold bg-green-600 hover:bg-green-700 text-white rounded-lg">Guardar Plantilla</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Nueva API Key -->
+    <div id="modalKey" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-slate-200">
+            <h3 class="text-lg font-bold mb-4 text-slate-900">Generar API Key para Nuevo Sistema</h3>
+            <form id="formKey" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Nombre del Sistema / App</label>
+                    <input type="text" id="keyName" placeholder="Ej: App Móvil Ventas" required
+                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div id="keyResultDisplay" class="hidden p-3 bg-slate-100 border border-slate-300 rounded-lg text-xs font-mono break-all text-slate-800">
+                    <strong>¡Guarda tu API Key! (Solo se muestra una vez):</strong>
+                    <p id="generatedKeyText" class="mt-1 font-bold text-blue-600 select-all"></p>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalKey')" class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Cerrar</button>
+                    <button type="submit" id="btnSaveKey" class="px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-900 text-white rounded-lg">Generar Key</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Previsualización de HTML -->
+    <div id="modalPreview" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <!-- Header del Modal -->
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <div>
+                    <h3 id="previewTitle" class="text-sm font-bold text-white">Previsualización de Contenido</h3>
+                    <p id="previewSubtitle" class="text-xs text-slate-400 font-mono"></p>
+                </div>
+                <button onclick="closeModal('modalPreview')" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+            </div>
+
+            <!-- Contenedor del Render HTML -->
+            <div class="p-6 overflow-y-auto bg-slate-100 flex-1">
+                <div id="previewFrame" class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm min-h-[300px]">
+                    <!-- El HTML se inyectará dinámicamente aquí -->
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeModal('modalPreview')" class="px-4 py-1.5 text-xs font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-900">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Script de Integración Javascript -->
+    <script>
+        function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        let dashboardCache = { logs: [], templates: [] };
+
+        async function loadDashboardData() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) return alert('Ingresa tu API Key');
+
+            try {
+                const res = await fetch('/api/v1/emails/metrics/', {
+                    headers: { 'X-API-KEY': apiKey }
+                });
+
+                if (!res.ok) return alert('Error de autorización con la API Key.');
+
+                const data = await res.json();
+                dashboardCache.logs = data.logs || [];
+                dashboardCache.templates = data.templates || [];
+
+                // 1. Render Stats
+                document.getElementById('statTotal').textContent = data.stats.total || 0;
+                document.getElementById('statSent').textContent = data.stats.sent || 0;
+                document.getElementById('statFailed').textContent = data.stats.failed || 0;
+                document.getElementById('statPending').textContent = data.stats.pending || 0;
+
+                // 2. Render Logs con botón de Previsualizar
+                const logsBody = document.getElementById('logsTableBody');
+                if (dashboardCache.logs.length > 0) {
+                    logsBody.innerHTML = dashboardCache.logs.map((log, index) => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono text-slate-400 text-[11px]">${log.tracking_id.substring(0, 8)}...</td>
+                            <td class="p-3 font-semibold">${log.recipient}</td>
+                            <td class="p-3">${log.subject || 'Sin Asunto'}</td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    log.status === 'SENT' ? 'bg-green-100 text-green-800' :
+                                    log.status === 'FAILED' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                                }">${log.status}</span>
+                            </td>
+                            <td class="p-3 text-slate-400">${new Date(log.created_at).toLocaleString()}</td>
+                            <td class="p-3 text-right">
+                                <button onclick="openPreview('log', ${index})" class="text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 px-2 py-1 rounded font-semibold border border-blue-200">
+                                    👁️ Ver HTML
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    logsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No hay registros de envío.</td></tr>`;
+                }
+
+                // 3. Render Plantillas con botón de Previsualizar
+                const templatesBody = document.getElementById('templatesTableBody');
+                if (dashboardCache.templates.length > 0) {
+                    templatesBody.innerHTML = dashboardCache.templates.map((tpl, index) => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-bold text-blue-600">${tpl.code}</td>
+                            <td class="p-3">${tpl.subject}</td>
+                            <td class="p-3 text-slate-400">${new Date(tpl.created_at).toLocaleString()}</td>
+                            <td class="p-3 text-right">
+                                <button onclick="openPreview('template', ${index})" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-1 rounded font-semibold border border-indigo-200">
+                                    👁️ Previsualizar
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    templatesBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No hay plantillas creadas.</td></tr>`;
+                }
+
+            } catch (err) {
+                console.error("Error al cargar dashboard:", err);
+            }
+        }
+
+        // Función para abrir la vista previa en el modal
+        function openPreview(type, index) {
+            const titleEl = document.getElementById('previewTitle');
+            const subtitleEl = document.getElementById('previewSubtitle');
+            const frameEl = document.getElementById('previewFrame');
+
+            if (type === 'log') {
+                const item = dashboardCache.logs[index];
+                titleEl.textContent = `Correo Enviado a: ${item.recipient}`;
+                subtitleEl.textContent = `Asunto: ${item.subject}`;
+                frameEl.innerHTML = item.body_html || '<p class="text-slate-400 text-xs">Sin contenido HTML</p>';
+            } else if (type === 'template') {
+                const item = dashboardCache.templates[index];
+                titleEl.textContent = `Plantilla: ${item.code}`;
+                subtitleEl.textContent = `Asunto Base: ${item.subject}`;
+                frameEl.innerHTML = item.body_html || '<p class="text-slate-400 text-xs">Sin código HTML</p>';
+            }
+
+            openModal('modalPreview');
+        }
+
+        // Crear Plantilla
+        document.getElementById('formTemplate').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiKey = document.getElementById('apiKey').value;
+
+            const res = await fetch('/api/v1/emails/templates/create/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
+                body: JSON.stringify({
+                    code: document.getElementById('tplCode').value,
+                    subject: document.getElementById('tplSubject').value,
+                    body_html: document.getElementById('tplBody').value
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                alert(data.message);
+                closeModal('modalTemplate');
+                loadDashboardData();
+            } else {
+                alert(data.error);
+            }
+        });
+
+        // Crear API Key
+        document.getElementById('formKey').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiKey = document.getElementById('apiKey').value;
+
+            const res = await fetch('/api/v1/emails/keys/create/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
+                body: JSON.stringify({ name: document.getElementById('keyName').value })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('generatedKeyText').textContent = data.key;
+                document.getElementById('keyResultDisplay').classList.remove('hidden');
+                document.getElementById('btnSaveKey').classList.add('hidden');
+                loadDashboardData();
+            } else {
+                alert(data.error);
+            }
+        });
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (apiKey) {
+                loadDashboardData();
+            }
+        });
+    </script>
+</body>
+</html>

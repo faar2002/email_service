@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Servicio de Correos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+
+    <!-- Navbar -->
+    <nav class="bg-slate-900 text-white p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wide">✉️ Servicio de Correos Dashboard</h1>
+            <div class="flex items-center space-x-2">
+                <span class="text-xs text-slate-400">API Key:</span>
+                <input type="password" id="apiKeyInput" placeholder="Pega tu X-API-KEY" 
+                       class="px-3 py-1 text-sm bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:border-blue-500 w-52">
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="max-w-6xl mx-auto mt-8 p-4 grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        <!-- Formulario de Envío -->
+        <section class="md:col-span-1 bg-white p-6 rounded-xl shadow-sm border border-slate-200 h-fit">
+            <h2 class="text-lg font-bold mb-4 text-slate-900">Enviar Correo</h2>
+            <form id="emailForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Destinatario</label>
+                    <input type="email" id="recipient" required placeholder="destinatario@ejemplo.com"
+                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Asunto</label>
+                    <input type="text" id="subject" required placeholder="Asunto del correo"
+                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Cuerpo (HTML)</label>
+                    <textarea id="bodyHtml" rows="4" required placeholder="<h1>¡Hola!</h1><p>Prueba de mensaje</p>"
+                              class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono text-xs"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Adjunto (Max 10 MB)</label>
+                    <input type="file" id="attachment"
+                           class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                </div>
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg text-sm transition-colors shadow">
+                    Despachar Correo
+                </button>
+            </form>
+            <div id="formResponse" class="mt-4 text-xs font-mono p-3 rounded hidden"></div>
+        </section>
+
+        <!-- Consulta de Estado -->
+        <section class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 class="text-lg font-bold mb-4 text-slate-900">Consultar Estado de Envío</h2>
+            
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="trackingInput" placeholder="UUID ej: 550e8400-e29b-41d4-a716-446655440000"
+                       class="flex-1 p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono">
+                <button id="searchBtn" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Consultar
+                </button>
+            </div>
+
+            <div id="statusResult" class="hidden border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2">
+                <div class="flex justify-between items-center">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Estado actual</span>
+                    <span id="statusBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold"></span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div><span class="font-bold text-slate-500">Destinatario:</span> <span id="resRecipient"></span></div>
+                    <div><span class="font-bold text-slate-500">Fecha:</span> <span id="resCreated"></span></div>
+                    <div class="col-span-2"><span class="font-bold text-slate-500">Asunto:</span> <span id="resSubject"></span></div>
+                </div>
+                <div id="errorBox" class="mt-2 p-2 bg-red-100 border border-red-200 text-red-700 text-xs rounded hidden">
+                    <strong>Error:</strong> <span id="resError"></span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        const API_BASE = '/api/v1/emails';
+
+        // Envío del Formulario
+        document.getElementById('emailForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiKey = document.getElementById('apiKeyInput').value;
+            const responseDiv = document.getElementById('formResponse');
+
+            if (!apiKey) {
+                alert('Ingresa tu X-API-KEY en la barra superior.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('recipient', document.getElementById('recipient').value);
+            formData.append('subject', document.getElementById('subject').value);
+            formData.append('body_html', document.getElementById('bodyHtml').value);
+            
+            const fileInput = document.getElementById('attachment');
+            if (fileInput.files[0]) {
+                formData.append('attachment', fileInput.files[0]);
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/send/`, {
+                    method: 'POST',
+                    headers: { 'X-API-KEY': apiKey },
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                responseDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-800');
+                if (res.ok) {
+                    responseDiv.classList.add('bg-green-100', 'text-green-800');
+                    responseDiv.innerHTML = `<strong>Éxito:</strong> ${data.message}<br><strong>Tracking ID:</strong> ${data.tracking_id}`;
+                    document.getElementById('trackingInput').value = data.tracking_id;
+                } else {
+                    responseDiv.classList.add('bg-red-100', 'text-red-700');
+                    responseDiv.innerHTML = `<strong>Error:</strong> ${JSON.stringify(data)}`;
+                }
+            } catch (err) {
+                alert('Error de conexión con la API.');
+            }
+        });
+
+        // Consulta de Estado
+        document.getElementById('searchBtn').addEventListener('click', async () => {
+            const apiKey = document.getElementById('apiKeyInput').value;
+            const trackingId = document.getElementById('trackingInput').value.trim();
+
+            if (!apiKey || !trackingId) {
+                alert('Ingresa la API Key y el Tracking ID.');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/status/${trackingId}/`, {
+                    headers: { 'X-API-KEY': apiKey }
+                });
+
+                const data = await res.json();
+                const statusResult = document.getElementById('statusResult');
+                const badge = document.getElementById('statusBadge');
+                const errorBox = document.getElementById('errorBox');
+
+                if (res.ok) {
+                    statusResult.classList.remove('hidden');
+                    document.getElementById('resRecipient').textContent = data.recipient;
+                    document.getElementById('resSubject').textContent = data.subject;
+                    document.getElementById('resCreated').textContent = new Date(data.created_at).toLocaleString();
+
+                    badge.textContent = data.status;
+                    badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-bold ';
+                    if (data.status === 'SENT') badge.classList.add('bg-green-100', 'text-green-800');
+                    else if (data.status === 'FAILED') badge.classList.add('bg-red-100', 'text-red-800');
+                    else badge.classList.add('bg-yellow-100', 'text-yellow-800');
+
+                    if (data.status === 'FAILED' && data.error_message) {
+                        errorBox.classList.remove('hidden');
+                        document.getElementById('resError').textContent = data.error_message;
+                    } else {
+                        errorBox.classList.add('hidden');
+                    }
+                } else {
+                    alert(data.detail || 'Registro no encontrado.');
+                }
+            } catch (err) {
+                alert('Error al consultar el servicio.');
+            }
+        });
+    </script>
+</body>
+</html>

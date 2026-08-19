@@ -18,8 +18,9 @@ DATABASES = {
 }
 
 # En Local imprimimos los correos en la consola en lugar de enviarlos por SMTP
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Para que sea enviado el correo habilitamos la siguiente linea 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 
-# Celery & Redis Local
-CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+# API Key predeterminada para el Dashboard en entorno local
+DEFAULT_DASHBOARD_API_KEY = env('DEFAULT_DASHBOARD_API_KEY', default='247fcfb9985edd0629c3b36e2cf11bdd09095322248da2e047982cc6e9098824')

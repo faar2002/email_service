@@ -1,0 +1,10 @@
+venv/
+*.pyc
+__pycache__/
+.env
+.vscode/
+# Archivos de entorno y credenciales
+.env
+.env.local
+.env.qa
+.env.prod

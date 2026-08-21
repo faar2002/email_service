@@ -73,5 +73,5 @@ class EmailTemplateAdmin(admin.ModelAdmin):
 
 @admin.register(APIKey)
 class APIKeyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'key', 'is_active', 'created_at')
+    list_display = ('id','name', 'key', 'is_active', 'created_at')
     readonly_fields = ('key',)  # Evita modificar la clave generada manualmente

@@ -6,26 +6,42 @@
     <title>Dashboard General - Servicio de Correos</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-100 min-h-screen text-slate-800">
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
 
     <!-- Navbar -->
     <nav class="bg-slate-900 text-white p-4 shadow-lg">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
-            <h1 class="text-xl font-bold">📊 Control Panel - Email Service</h1>
-            <div class="flex items-center gap-2">
-                <span class="text-xs text-slate-400">X-API-KEY:</span>
-                <input type="password" id="apiKey" value="{{ default_api_key }}" placeholder="Ingresa tu API Key" 
-                    class="px-3 py-1 text-sm bg-slate-800 border border-slate-700 rounded text-white focus:outline-none w-52 font-mono">
-                <button onclick="loadDashboardData()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs font-semibold">Cargar</button>
+            <h1 class="text-xl font-bold tracking-wide">📊 Control Panel - Email Service</h1>
+            
+            <div class="flex items-center gap-4">
+                <!-- Selector de API Key -->
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400">X-API-KEY:</span>
+                    <input type="password" id="apiKey" value="{{ default_api_key }}" placeholder="Ingresa tu API Key" 
+                        class="px-3 py-1 text-sm bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:border-blue-500 w-48 font-mono">
+                    <button onclick="loadDashboardData()" class="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs font-semibold transition-colors">
+                        Cargar
+                    </button>
+                </div>
+
+                <!-- Usuario Activo y Logout -->
+                <div class="flex items-center gap-3 pl-4 border-l border-slate-800">
+                    <span class="text-xs text-slate-300 font-semibold">👤 {{ request.user.username }}</span>
+                    <a href="{% url 'logout' %}" 
+                    class="bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white px-2.5 py-1 rounded text-xs font-bold border border-red-500/30 transition-all">
+                        Cerrar Sesión
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Banner de Advertencia si NO hay API Key configurada -->
     {% if not default_api_key %}
-    <div id="configWarning" class="max-w-7xl mx-auto mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex justify-between items-center">
-        <div>
-            <strong>⚠️ Advertencia de Configuración:</strong> No se ha detectado una API Key predeterminada. Agrega <code>DEFAULT_DASHBOARD_API_KEY</code> en tu <code>core/settings/local.py</code> para omitir este paso en desarrollo.
+    <div id="configWarning" class="max-w-7xl mx-auto mt-4 px-4">
+        <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs flex justify-between items-center">
+            <div>
+                <strong>⚠️ Advertencia de Configuración:</strong> No se ha detectado una API Key predeterminada. Agrega <code>DEFAULT_DASHBOARD_API_KEY</code> en tu <code>core/settings/local.py</code>.
+            </div>
         </div>
     </div>
     {% endif %}
@@ -52,16 +68,24 @@
             </div>
         </section>
 
-        <!-- Pestañas y Contenido -->
+        <!-- Pestañas y Tablas -->
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div class="border-b border-slate-200 flex justify-between items-center bg-slate-50 pr-4">
                 <div class="flex text-sm font-semibold">
-                    <button onclick="switchTab('logsTab')" class="tab-btn px-6 py-3 border-b-2 border-blue-600 text-blue-600">Logs de Correos</button>
-                    <button onclick="switchTab('templatesTab')" class="tab-btn px-6 py-3 border-b-2 border-transparent text-slate-500">Plantillas</button>
-                    <button onclick="switchTab('keysTab')" class="tab-btn px-6 py-3 border-b-2 border-transparent text-slate-500">API Keys / Sistemas</button>
+                    <button onclick="switchTab('logsTab')" id="btnLogsTab" class="tab-btn px-6 py-3 border-b-2 border-blue-600 text-blue-600">
+                        Logs de Correos
+                    </button>
+                    <button onclick="switchTab('templatesTab')" id="btnTemplatesTab" class="tab-btn px-6 py-3 border-b-2 border-transparent text-slate-500">
+                        Plantillas
+                    </button>
+                    <button onclick="switchTab('keysTab')" id="btnKeysTab" class="tab-btn px-6 py-3 border-b-2 border-transparent text-slate-500">
+                        API Keys / Sistemas
+                    </button>
                 </div>
-                <!-- Botones de Acción -->
                 <div class="flex gap-2">
+                    <button onclick="openSenderModal()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                        ✉️ Probar Envío
+                    </button>
                     <button onclick="openModal('modalTemplate')" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
                         + Nueva Plantilla
                     </button>
@@ -71,7 +95,7 @@
                 </div>
             </div>
 
-            <!-- Tabla Email Logs -->
+            <!-- Tabla 1: Email Logs -->
             <div id="logsTab" class="tab-content p-4">
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-100 uppercase text-slate-500 font-semibold">
@@ -81,13 +105,21 @@
                             <th class="p-3">Asunto</th>
                             <th class="p-3">Estado</th>
                             <th class="p-3">Fecha</th>
+                            <th class="p-3 text-right">Acción</th>
                         </tr>
                     </thead>
                     <tbody id="logsTableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
+                <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
+                    <span id="logsPageInfo">Página 1 de 1</span>
+                    <div class="flex gap-2">
+                        <button id="btnLogsPrev" onclick="changePage('logs', -1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg disabled:opacity-50">← Anterior</button>
+                        <button id="btnLogsNext" onclick="changePage('logs', 1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg disabled:opacity-50">Siguiente →</button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Tabla Plantillas -->
+            <!-- Tabla 2: Plantillas -->
             <div id="templatesTab" class="tab-content p-4 hidden">
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-100 uppercase text-slate-500 font-semibold">
@@ -95,13 +127,21 @@
                             <th class="p-3">Código</th>
                             <th class="p-3">Asunto Base</th>
                             <th class="p-3">Fecha Creación</th>
+                            <th class="p-3 text-right">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="templatesTableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
+                <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
+                    <span id="tplPageInfo">Página 1 de 1</span>
+                    <div class="flex gap-2">
+                        <button id="btnTplPrev" onclick="changePage('tpl', -1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg disabled:opacity-50">← Anterior</button>
+                        <button id="btnTplNext" onclick="changePage('tpl', 1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg disabled:opacity-50">Siguiente →</button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Tabla API Keys -->
+            <!-- Tabla 3: API Keys -->
             <div id="keysTab" class="tab-content p-4 hidden">
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-100 uppercase text-slate-500 font-semibold">
@@ -109,34 +149,41 @@
                             <th class="p-3">Sistema / Aplicación</th>
                             <th class="p-3">API Key Hex</th>
                             <th class="p-3">Estado</th>
+                            <th class="p-3">Fecha Creación</th>
+                            <th class="p-3 text-right">Acción</th>
                         </tr>
                     </thead>
                     <tbody id="keysTableBody" class="divide-y divide-slate-100"></tbody>
                 </table>
+                <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500">
+                    <span id="keysPageInfo">Página 1 de 1</span>
+                    <div class="flex gap-2">
+                        <button id="btnKeysPrev" onclick="changePage('keys', -1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg disabled:opacity-50">← Anterior</button>
+                        <button id="btnKeysNext" onclick="changePage('keys', 1)" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg disabled:opacity-50">Siguiente →</button>
+                    </div>
+                </div>
             </div>
+
         </div>
 
     </main>
 
-    <!-- Modal 1: Nueva Plantilla -->
-    <div id="modalTemplate" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+    <!-- Modal: Nueva Plantilla -->
+    <div id="modalTemplate" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xl border border-slate-200">
             <h3 class="text-lg font-bold mb-4 text-slate-900">Crear Nueva Plantilla</h3>
             <form id="formTemplate" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Código de Plantilla</label>
-                    <input type="text" id="tplCode" placeholder="Ej: WELCOME_USER" required
-                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="tplCode" placeholder="Ej: WELCOME_USER" required class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Asunto Base</label>
-                    <input type="text" id="tplSubject" placeholder="¡Bienvenido/a, {{ nombre }}!" required
-                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="tplSubject" placeholder="¡Bienvenido/a, {{ nombre }}!" required class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Cuerpo HTML</label>
-                    <textarea id="tplBody" rows="5" placeholder="<h1>Hola {{ nombre }}</h1>..." required
-                              class="w-full p-2 text-sm border border-slate-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                    <textarea id="tplBody" rows="5" placeholder="<h1>Hola {{ nombre }}</h1>..." required class="w-full p-2 text-sm border border-slate-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
                 </div>
                 <div class="flex justify-end gap-2">
                     <button type="button" onclick="closeModal('modalTemplate')" class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
@@ -146,15 +193,36 @@
         </div>
     </div>
 
-    <!-- Modal 2: Nueva API Key -->
-    <div id="modalKey" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50">
+    <!-- Modal: Editar Plantilla -->
+    <div id="modalEditTemplate" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-xl border border-slate-200">
+            <h3 class="text-lg font-bold mb-4 text-slate-900">Editar Plantilla: <span id="editTplCodeDisplay" class="text-blue-600"></span></h3>
+            <form id="formEditTemplate" class="space-y-4">
+                <input type="hidden" id="editTplId">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Asunto Base</label>
+                    <input type="text" id="editTplSubject" required class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Cuerpo HTML</label>
+                    <textarea id="editTplBody" rows="6" required class="w-full p-2 text-sm border border-slate-300 rounded-lg font-mono text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="closeModal('modalEditTemplate')" class="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-lg">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Nueva API Key -->
+    <div id="modalKey" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border border-slate-200">
             <h3 class="text-lg font-bold mb-4 text-slate-900">Generar API Key para Nuevo Sistema</h3>
             <form id="formKey" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold uppercase text-slate-500 mb-1">Nombre del Sistema / App</label>
-                    <input type="text" id="keyName" placeholder="Ej: App Móvil Ventas" required
-                           class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <input type="text" id="keyName" placeholder="Ej: App Móvil Ventas" required class="w-full p-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                 </div>
                 <div id="keyResultDisplay" class="hidden p-3 bg-slate-100 border border-slate-300 rounded-lg text-xs font-mono break-all text-slate-800">
                     <strong>¡Guarda tu API Key! (Solo se muestra una vez):</strong>
@@ -168,11 +236,9 @@
         </div>
     </div>
 
-    <!-- Modal 3: Previsualización de HTML -->
+    <!-- Modal: Previsualización HTML -->
     <div id="modalPreview" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
-            
-            <!-- Header del Modal -->
             <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
                 <div>
                     <h3 id="previewTitle" class="text-sm font-bold text-white">Previsualización de Contenido</h3>
@@ -180,51 +246,79 @@
                 </div>
                 <button onclick="closeModal('modalPreview')" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
             </div>
-
-            <!-- Contenedor del Render HTML -->
             <div class="p-6 overflow-y-auto bg-slate-100 flex-1">
-                <div id="previewFrame" class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm min-h-[300px]">
-                    <!-- El HTML se inyectará dinámicamente aquí -->
-                </div>
+                <div id="previewFrame" class="bg-white p-6 rounded-lg border border-slate-200 shadow-sm min-h-[300px]"></div>
             </div>
-
-            <!-- Footer -->
             <div class="p-3 bg-slate-50 border-t border-slate-200 flex justify-end">
-                <button onclick="closeModal('modalPreview')" class="px-4 py-1.5 text-xs font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-900">
-                    Cerrar
-                </button>
+                <button onclick="closeModal('modalPreview')" class="px-4 py-1.5 text-xs font-bold bg-slate-800 text-white rounded-lg hover:bg-slate-900">Cerrar</button>
             </div>
         </div>
     </div>
-    <!-- Script de Integración Javascript -->
+
+    <!-- Modal: Emisor (Sender) -->
+    <div id="modalSender" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden z-50 p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 bg-slate-900 text-white flex justify-between items-center">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">✉️ Consola de Envío de Correos</h3>
+                <button onclick="closeSenderModal()" class="text-slate-400 hover:text-white text-lg font-bold">✕</button>
+            </div>
+            <div class="flex-1 bg-slate-100 p-2">
+                <iframe id="senderFrame" src="" class="w-full h-[550px] border-0 rounded-lg"></iframe>
+            </div>
+        </div>
+    </div>
+
     <script>
+        let dashboardCache = { logs: [], templates: [], keys: [] };
+        let pageState = { logs: 1, tpl: 1, keys: 1 };
+        let totalPagesState = { logs: 1, tpl: 1, keys: 1 };
+
         function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        let dashboardCache = { logs: [], templates: [] };
+        function openSenderModal() {
+            document.getElementById('senderFrame').src = '/dashboard/sender/';
+            openModal('modalSender');
+        }
+
+        function closeSenderModal() {
+            closeModal('modalSender');
+            loadDashboardData();
+        }
 
         async function loadDashboardData() {
             const apiKey = document.getElementById('apiKey').value.trim();
             if (!apiKey) return alert('Ingresa tu API Key');
 
             try {
-                const res = await fetch('/api/v1/emails/metrics/', {
+                const res = await fetch(`/api/v1/emails/metrics/?logs_page=${pageState.logs}&tpl_page=${pageState.tpl}&keys_page=${pageState.keys}`, {
                     headers: { 'X-API-KEY': apiKey }
                 });
 
-                if (!res.ok) return alert('Error de autorización con la API Key.');
+                if (!res.ok) {
+                    const errData = await res.json();
+                    return alert(`Error: ${errData.detail || 'API Key no válida o inactiva.'}`);
+                }
 
                 const data = await res.json();
+                
+                // Guardar datos en la caché local
                 dashboardCache.logs = data.logs || [];
                 dashboardCache.templates = data.templates || [];
+                dashboardCache.keys = data.api_keys || [];
 
-                // 1. Render Stats
+                // Guardar total de páginas
+                totalPagesState.logs = data.logs_pagination ? data.logs_pagination.total_pages : 1;
+                totalPagesState.tpl = data.templates_pagination ? data.templates_pagination.total_pages : 1;
+                totalPagesState.keys = data.keys_pagination ? data.keys_pagination.total_pages : 1;
+
+                // 1. Renderizar Métricas (Stats)
                 document.getElementById('statTotal').textContent = data.stats.total || 0;
                 document.getElementById('statSent').textContent = data.stats.sent || 0;
                 document.getElementById('statFailed').textContent = data.stats.failed || 0;
                 document.getElementById('statPending').textContent = data.stats.pending || 0;
 
-                // 2. Render Logs con botón de Previsualizar
+                // 2. Renderizar Email Logs
                 const logsBody = document.getElementById('logsTableBody');
                 if (dashboardCache.logs.length > 0) {
                     logsBody.innerHTML = dashboardCache.logs.map((log, index) => `
@@ -247,10 +341,17 @@
                         </tr>
                     `).join('');
                 } else {
-                    logsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No hay registros de envío.</td></tr>`;
+                    logsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">Sin registros de envío.</td></tr>`;
                 }
 
-                // 3. Render Plantillas con botón de Previsualizar
+                // Paginación Logs
+                if (data.logs_pagination) {
+                    document.getElementById('logsPageInfo').textContent = `Página ${data.logs_pagination.current_page} de ${data.logs_pagination.total_pages || 1} (${data.logs_pagination.total_records} registros)`;
+                    document.getElementById('btnLogsPrev').disabled = !data.logs_pagination.has_previous;
+                    document.getElementById('btnLogsNext').disabled = !data.logs_pagination.has_next;
+                }
+
+                // 3. Renderizar Plantillas
                 const templatesBody = document.getElementById('templatesTableBody');
                 if (dashboardCache.templates.length > 0) {
                     templatesBody.innerHTML = dashboardCache.templates.map((tpl, index) => `
@@ -258,99 +359,201 @@
                             <td class="p-3 font-mono font-bold text-blue-600">${tpl.code}</td>
                             <td class="p-3">${tpl.subject}</td>
                             <td class="p-3 text-slate-400">${new Date(tpl.created_at).toLocaleString()}</td>
-                            <td class="p-3 text-right">
+                            <td class="p-3 text-right flex justify-end gap-1">
                                 <button onclick="openPreview('template', ${index})" class="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-1 rounded font-semibold border border-indigo-200">
-                                    👁️ Previsualizar
+                                    👁️ Ver
+                                </button>
+                                <button onclick="openEditTemplate(${index})" class="text-xs bg-amber-50 text-amber-600 hover:bg-amber-100 px-2 py-1 rounded font-semibold border border-amber-200">
+                                    ✏️ Editar
                                 </button>
                             </td>
                         </tr>
                     `).join('');
                 } else {
-                    templatesBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No hay plantillas creadas.</td></tr>`;
+                    templatesBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">Sin plantillas creadas.</td></tr>`;
+                }
+
+                // Paginación Plantillas
+                if (data.templates_pagination) {
+                    document.getElementById('tplPageInfo').textContent = `Página ${data.templates_pagination.current_page} de ${data.templates_pagination.total_pages || 1} (${data.templates_pagination.total_records} registros)`;
+                    document.getElementById('btnTplPrev').disabled = !data.templates_pagination.has_previous;
+                    document.getElementById('btnTplNext').disabled = !data.templates_pagination.has_next;
+                }
+
+                // 4. Renderizar API Keys
+                const keysBody = document.getElementById('keysTableBody');
+                if (dashboardCache.keys && dashboardCache.keys.length > 0) {
+                    keysBody.innerHTML = dashboardCache.keys.map((key, index) => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-bold">${key.name}</td>
+                            <td class="p-3 font-mono text-slate-400">${key.key ? key.key.substring(0, 16) + '...' : '***'}</td>
+                            <td class="p-3">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${key.is_active ? 'bg-green-100 text-green-800' : 'bg-slate-200 text-slate-600'}">
+                                    ${key.is_active ? 'ACTIVA' : 'INACTIVA'}
+                                </span>
+                            </td>
+                            <td class="p-3 text-slate-400">${new Date(key.created_at).toLocaleString()}</td>
+                            <td class="p-3 text-right">
+                                <button onclick="toggleKeyStatusByIndex(event, ${index})" 
+                                        class="text-xs ${key.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200' : 'bg-green-50 text-green-600 hover:bg-green-100 border-green-200'} px-2 py-1 rounded font-semibold border">
+                                    ${key.is_active ? 'Desactivar' : 'Activar'}
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    keysBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">Sin API Keys registradas.</td></tr>`;
+                }
+
+                // Paginación API Keys
+                if (data.keys_pagination) {
+                    document.getElementById('keysPageInfo').textContent = `Página ${data.keys_pagination.current_page} de ${data.keys_pagination.total_pages || 1} (${data.keys_pagination.total_records} registros)`;
+                    document.getElementById('btnKeysPrev').disabled = !data.keys_pagination.has_previous;
+                    document.getElementById('btnKeysNext').disabled = !data.keys_pagination.has_next;
                 }
 
             } catch (err) {
-                console.error("Error al cargar dashboard:", err);
+                console.error("Error al cargar el dashboard:", err);
+                alert("Ocurrió un error al conectar con el servidor.");
             }
         }
 
-        // Función para abrir la vista previa en el modal
-        function openPreview(type, index) {
-            const titleEl = document.getElementById('previewTitle');
-            const subtitleEl = document.getElementById('previewSubtitle');
-            const frameEl = document.getElementById('previewFrame');
+        // 2. Función de alternancia de estado
+        async function toggleKeyStatusByIndex(event, index) {
+            if (event) event.preventDefault();
+            
+            const item = dashboardCache.keys[index];
+            if (!item) return alert('Registro no encontrado en el estado actual.');
 
-            if (type === 'log') {
-                const item = dashboardCache.logs[index];
-                titleEl.textContent = `Correo Enviado a: ${item.recipient}`;
-                subtitleEl.textContent = `Asunto: ${item.subject}`;
-                frameEl.innerHTML = item.body_html || '<p class="text-slate-400 text-xs">Sin contenido HTML</p>';
-            } else if (type === 'template') {
-                const item = dashboardCache.templates[index];
-                titleEl.textContent = `Plantilla: ${item.code}`;
-                subtitleEl.textContent = `Asunto Base: ${item.subject}`;
-                frameEl.innerHTML = item.body_html || '<p class="text-slate-400 text-xs">Sin código HTML</p>';
+            const realKeyId = String(item.id); // Garantiza mantener el UUID o String completo
+            const currentApiKey = document.getElementById('apiKey').value.trim();
+
+            if (!currentApiKey) {
+                alert('Ingresa tu API Key en la barra superior.');
+                return;
             }
 
+            try {
+                const res = await fetch(`/api/v1/emails/keys/${realKeyId}/toggle/`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'X-API-KEY': currentApiKey,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    loadDashboardData();
+                } else {
+                    alert(`Error (${res.status}): ${data.error || data.detail || 'No se pudo cambiar el estado.'}`);
+                }
+            } catch (err) {
+                console.error("Error de red al alternar estado de API Key:", err);
+                alert("Ocurrió un error al conectar con el servidor.");
+            }
+        }
+
+        function changePage(tab, direction) {
+            pageState[tab] += direction;
+            if (pageState[tab] < 1) pageState[tab] = 1;
+            if (pageState[tab] > totalPagesState[tab]) pageState[tab] = totalPagesState[tab];
+            loadDashboardData();
+        }
+
+        function openPreview(type, index) {
+            const item = type === 'log' ? dashboardCache.logs[index] : dashboardCache.templates[index];
+            document.getElementById('previewTitle').textContent = type === 'log' ? `Correo: ${item.recipient}` : `Plantilla: ${item.code}`;
+            document.getElementById('previewSubtitle').textContent = `Asunto: ${item.subject}`;
+            document.getElementById('previewFrame').innerHTML = item.body_html || '<p class="text-slate-400 text-xs">Sin HTML</p>';
             openModal('modalPreview');
         }
 
-        // Crear Plantilla
-        document.getElementById('formTemplate').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const apiKey = document.getElementById('apiKey').value;
+        function openEditTemplate(index) {
+            const item = dashboardCache.templates[index];
+            document.getElementById('editTplId').value = item.id;
+            document.getElementById('editTplCodeDisplay').textContent = item.code;
+            document.getElementById('editTplSubject').value = item.subject;
+            document.getElementById('editTplBody').value = item.body_html;
+            openModal('modalEditTemplate');
+        }
 
-            const res = await fetch('/api/v1/emails/templates/create/', {
-                method: 'POST',
+        document.getElementById('formEditTemplate').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const tplId = document.getElementById('editTplId').value;
+
+            const res = await fetch(`/api/v1/emails/templates/${tplId}/update/`, {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
                 body: JSON.stringify({
-                    code: document.getElementById('tplCode').value,
-                    subject: document.getElementById('tplSubject').value,
-                    body_html: document.getElementById('tplBody').value
+                    subject: document.getElementById('editTplSubject').value,
+                    body_html: document.getElementById('editTplBody').value
                 })
             });
 
             const data = await res.json();
             if (res.ok) {
                 alert(data.message);
-                closeModal('modalTemplate');
+                closeModal('modalEditTemplate');
                 loadDashboardData();
             } else {
-                alert(data.error);
+                alert(data.error || 'Error al actualizar.');
             }
         });
 
-        // Crear API Key
-        document.getElementById('formKey').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const apiKey = document.getElementById('apiKey').value;
-
-            const res = await fetch('/api/v1/emails/keys/create/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-API-KEY': apiKey },
-                body: JSON.stringify({ name: document.getElementById('keyName').value })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                document.getElementById('generatedKeyText').textContent = data.key;
-                document.getElementById('keyResultDisplay').classList.remove('hidden');
-                document.getElementById('btnSaveKey').classList.add('hidden');
-                loadDashboardData();
-            } else {
-                alert(data.error);
+        async function toggleKeyStatus(event, keyId) {
+            if (event) event.preventDefault();
+            
+            const apiKey = document.getElementById('apiKey').value.trim();
+            if (!apiKey) {
+                alert('Ingresa tu API Key en la barra superior.');
+                return;
             }
-        });
+
+            try {
+                const res = await fetch(`/api/v1/emails/keys/${keyId}/toggle/`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'X-API-KEY': apiKey,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    // Recargar la tabla con los datos actualizados
+                    loadDashboardData();
+                } else {
+                    alert(`Error (${res.status}): ${data.error || data.detail || 'No se pudo cambiar el estado de la API Key.'}`);
+                }
+            } catch (err) {
+                console.error("Error de red al alternar estado de API Key:", err);
+                alert("Ocurrió un error al conectar con el servidor.");
+            }
+        }
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-blue-600', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-slate-500');
+            });
+
+            const activeBtn = document.getElementById('btn' + tabId.charAt(0).toUpperCase() + tabId.slice(1));
+            if (activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-slate-500');
+                activeBtn.classList.add('border-blue-600', 'text-blue-600');
+            }
         }
+
         document.addEventListener('DOMContentLoaded', () => {
             const apiKey = document.getElementById('apiKey').value.trim();
-            if (apiKey) {
-                loadDashboardData();
-            }
+            if (apiKey) loadDashboardData();
         });
     </script>
 </body>
